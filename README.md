@@ -1,32 +1,34 @@
-# Netflix Churn Predictor
+# Telco Customer Churn Prediction
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
-![Jupyter](https://img.shields.io/badge/Jupyter-Notebooks-F37626?logo=jupyter&logoColor=white)
 ![Pandas](https://img.shields.io/badge/Pandas-Data%20Processing-150458?logo=pandas&logoColor=white)
-![Project Status](https://img.shields.io/badge/Status-Data%20Preparation%20%26%20EDA-blue)
+![Scikit-learn](https://img.shields.io/badge/Scikit--learn-Machine%20Learning-F7931E?logo=scikitlearn&logoColor=white)
+![Matplotlib](https://img.shields.io/badge/Matplotlib-Visualization-11557C)
+![Project Status](https://img.shields.io/badge/Status-Modeling%20%26%20Evaluation-success)
 
-An end-to-end data preparation and exploratory analysis project for studying customer churn on a synthetic Netflix-style streaming platform.
+An end-to-end machine-learning project for predicting customer churn in a telecommunications company using customer demographics, subscribed services, account information, contract details, and billing behavior.
 
-The repository cleans six interconnected behavioral datasets, validates relationships across them, engineers user-level engagement features, and produces a consolidated modeling table with **10,000 users and 67 columns**. The project also investigates whether the available churn target contains enough predictive signal to support meaningful machine-learning modeling.
+The project builds an interpretable **Logistic Regression** classifier, evaluates its ability to identify customers at risk of leaving, and produces professional visual and tabular outputs for model analysis.
 
 > [!IMPORTANT]
-> **Current status:** this repository does not yet contain a trained churn prediction model. The implemented pipeline currently covers data cleaning, cross-dataset validation, feature engineering, dataset merging, and exploratory data analysis (EDA).
+> The primary objective is not only to maximize overall accuracy, but also to improve the identification of churned customers. For this reason, the project evaluates precision, recall, F1 score, ROC-AUC, and confusion matrices in addition to accuracy.
 
 ---
 
 ## Table of Contents
 
 - [Project Overview](#project-overview)
-- [Key Findings](#key-findings)
-- [Pipeline](#pipeline)
+- [Business Problem](#business-problem)
 - [Dataset](#dataset)
-- [Repository Structure](#repository-structure)
-- [Data Cleaning](#data-cleaning)
-- [Feature Engineering](#feature-engineering)
-- [Exploratory Data Analysis](#exploratory-data-analysis)
-- [Getting Started](#getting-started)
-- [Recommended Notebook Order](#recommended-notebook-order)
+- [Machine-Learning Pipeline](#machine-learning-pipeline)
+- [Data Preparation](#data-preparation)
+- [Modeling Approach](#modeling-approach)
+- [Baseline Results](#baseline-results)
+- [Model Improvements](#model-improvements)
 - [Generated Outputs](#generated-outputs)
+- [Repository Structure](#repository-structure)
+- [Getting Started](#getting-started)
+- [Interpreting the Results](#interpreting-the-results)
 - [Known Limitations](#known-limitations)
 - [Roadmap](#roadmap)
 
@@ -34,500 +36,476 @@ The repository cleans six interconnected behavioral datasets, validates relation
 
 ## Project Overview
 
-Customer churn prediction is typically used to identify subscribers who may cancel or become inactive. In this project, the churn label is:
+Customer churn occurs when a customer stops using a company's services. In the telecommunications industry, predicting churn can help a company identify customers who may leave and take retention action before the cancellation occurs.
+
+The target variable in this project is:
 
 ```text
-is_active
+Churn
 ```
 
-A value of `False` represents an inactive user and is treated as the churn outcome. After cleaning, the user table contains:
+The target is converted into a binary variable:
 
-- **8,519 active users**
-- **1,481 inactive users**
-- **14.81% inactive/churned users**
+- `0` = customer remained with the company
+- `1` = customer churned
 
-The broader goal is to transform raw platform activity into user-level behavioral features that could eventually support a churn classifier.
+The dataset contains **7,043 customer records and 21 original columns**. Each row represents one customer.
 
-The project currently focuses on four stages:
+The project focuses on the following stages:
 
-1. **Clean** noisy synthetic source data.
-2. **Validate** IDs and relationships across tables.
-3. **Engineer** user-level behavioral and recency features.
-4. **Analyze** whether those features contain useful churn signal.
+1. Load and inspect the Telco Customer Churn dataset.
+2. Clean invalid or missing values.
+3. Separate numerical and categorical variables.
+4. Build a reusable preprocessing and modeling pipeline.
+5. Train a Logistic Regression baseline model.
+6. Evaluate classification performance using multiple metrics.
+7. Tune model hyperparameters and decision thresholds.
+8. Generate visualizations and CSV reports for further analysis.
 
 ---
 
-## Key Findings
+## Business Problem
 
-The EDA produced an important result: **the synthetic `is_active` label appears to have been generated largely independently of user behavior**.
+Customer acquisition is often more expensive than customer retention. A churn-prediction model can support retention teams by ranking customers according to their estimated risk of leaving.
 
-Observed consequences include:
+A useful churn model should answer questions such as:
 
-- Behavioral features show near-zero correlation with `is_active`.
-- Watch activity distributions are nearly identical for active and inactive users.
-- Recommendation engagement shows little separation by churn status.
-- Tenure does not display the expected churn pattern commonly seen in real subscription data.
-- Average progress and completion behavior are nearly indistinguishable between the two target classes.
+- Which customers have the highest probability of churning?
+- Which account or service characteristics are associated with churn?
+- How many churned customers can the model correctly identify?
+- What tradeoff exists between capturing more churners and generating more false alarms?
+- Which decision threshold is most appropriate for a retention campaign?
 
-This means that training a classifier immediately may produce misleading results. The current analysis therefore recommends improving or regenerating the target signal before treating model performance as meaningful.
-
-Additional EDA findings include:
-
-- `monthly_spend` is strongly right-skewed and contains extreme outliers, reaching roughly $998.
-- `age` still contains high-end anomalies, including values above 100.
-- `rec_click_rate` is heavily zero-inflated because many users never click a recommendation.
-- `avg_sentiment` and `avg_review_rating` are highly correlated and may create multicollinearity.
-- `total_sessions` and `total_watch_minutes` are also strongly related and may be redundant for some models.
-
----
-
-## Pipeline
-
-```mermaid
-flowchart LR
-    A[Raw CSV Files] --> B[data_cleaning.ipynb]
-    B --> C[Cleaned CSV Files]
-    C --> D[data_merge.ipynb]
-    D --> E[users_merged.csv]
-    E --> F[EDA.ipynb]
-    F --> G[Modeling Readiness Assessment]
-
-    H[External Telco Churn Dataset] --> I[eda-telco.ipynb]
-    I --> J[Reference Churn Analysis]
-```
-
-### Main workflow
-
-```text
-orig_data/*.csv
-      |
-      v
-data_cleaning.ipynb
-      |
-      v
-cleaned_data/*_clean.csv
-      |
-      v
-data_merge.ipynb
-      |
-      v
-cleaned_data/users_merged.csv
-      |
-      v
-EDA.ipynb
-```
+This project treats churn prediction as a **binary classification problem**.
 
 ---
 
 ## Dataset
 
-The repository uses a synthetic Netflix-style dataset covering user activity from **January 1, 2024 through December 31, 2025**.
+The project uses the Telco Customer Churn dataset stored as:
 
-### Raw data
+```text
+WA_Fn-UseC_-Telco-Customer-Churn.csv
+```
 
-| File | Rows | Description |
-|---|---:|---|
-| `users.csv` | 10,300 | User demographics, plans, account status, and spending |
-| `movies.csv` | 1,040 | Content metadata, genres, ratings, and production attributes |
-| `watch_history.csv` | 105,000 | Viewing sessions, completion behavior, devices, and progress |
-| `reviews.csv` | 15,450 | Ratings, review sentiment, and voting activity |
-| `recommendation_logs.csv` | 52,000 | Recommendation exposure, scores, clicks, and algorithms |
-| `search_logs.csv` | 26,500 | Search queries, clicks, duration, filters, and devices |
-| **Total** | **210,290** | Records across six connected tables |
+### Dataset dimensions
 
-### Cleaned data
+```text
+7,043 rows x 21 columns
+```
 
-| File | Rows | Columns |
-|---|---:|---:|
-| `users_clean.csv` | 10,000 | 16 |
-| `movies_clean.csv` | 1,000 | 19 |
-| `watch_history_clean.csv` | 100,000 | 12 |
-| `reviews_clean.csv` | 14,993 | 12 |
-| `recommendation_logs_clean.csv` | 50,000 | 11 |
-| `search_logs_clean.csv` | 25,000 | 11 |
-| `users_merged.csv` | 10,000 | 67 |
+### Feature groups
 
-> The source data intentionally includes missing values, duplicates, outliers, and inconsistent records so that the project can demonstrate realistic data-cleaning decisions.
+| Group | Example variables |
+|---|---|
+| Customer demographics | `gender`, `SeniorCitizen`, `Partner`, `Dependents` |
+| Account information | `tenure`, `Contract`, `PaperlessBilling`, `PaymentMethod` |
+| Phone services | `PhoneService`, `MultipleLines` |
+| Internet services | `InternetService`, `OnlineSecurity`, `OnlineBackup`, `DeviceProtection` |
+| Support and entertainment | `TechSupport`, `StreamingTV`, `StreamingMovies` |
+| Billing information | `MonthlyCharges`, `TotalCharges` |
+| Target | `Churn` |
+
+### Target imbalance
+
+The dataset contains more non-churn customers than churn customers. Because of this imbalance, accuracy alone can provide an incomplete picture of model performance.
+
+The analysis therefore places special attention on:
+
+- Churn recall
+- Churn precision
+- F1 score
+- ROC-AUC
+- Precision-recall behavior
+- Confusion-matrix errors
+
+---
+
+## Machine-Learning Pipeline
+
+```mermaid
+flowchart LR
+    A[Telco CSV Dataset] --> B[Data Validation and Cleaning]
+    B --> C[Train/Test Split]
+    C --> D[ColumnTransformer]
+    D --> E1[Numerical Imputation and Scaling]
+    D --> E2[Categorical Imputation and One-Hot Encoding]
+    E1 --> F[Logistic Regression]
+    E2 --> F
+    F --> G[Probability Predictions]
+    G --> H[Model Evaluation]
+    H --> I[Metrics, Charts, and Predictions]
+    H --> J[Hyperparameter and Threshold Optimization]
+```
+
+The preprocessing steps and Logistic Regression model are placed inside a Scikit-learn `Pipeline`. This reduces data leakage risk and ensures that the same transformations are applied consistently during training, cross-validation, testing, and future predictions.
+
+---
+
+## Data Preparation
+
+### Customer identifier
+
+`customerID` is an identifier rather than a predictive customer characteristic, so it is removed from the model features and retained only when useful for associating predictions with customers.
+
+### Total charges
+
+`TotalCharges` may be loaded as text because some records contain blank values. The project converts it to a numerical column:
+
+```python
+pd.to_numeric(df["TotalCharges"], errors="coerce")
+```
+
+Invalid or blank values become missing values and are handled inside the preprocessing pipeline.
+
+### Target conversion
+
+The `Churn` column is converted from `Yes` and `No` values into binary labels:
+
+```text
+Yes -> 1
+No  -> 0
+```
+
+### Numerical preprocessing
+
+Numerical variables are processed using:
+
+- Median imputation for missing values
+- Standardization with `StandardScaler`
+
+### Categorical preprocessing
+
+Categorical variables are processed using:
+
+- Most-frequent imputation
+- One-hot encoding
+- Safe handling of categories that were not present during training
+
+### Train/test split
+
+The dataset is divided into training and testing sets using stratification so that both subsets preserve approximately the same churn proportion.
+
+---
+
+## Modeling Approach
+
+### Baseline model
+
+The baseline classifier is Logistic Regression. It was selected because it:
+
+- Provides a strong and interpretable classification baseline
+- Produces churn probabilities
+- Works well with standardized numerical variables and one-hot encoded categories
+- Allows coefficients to be examined to understand model behavior
+- Can incorporate class weighting when churn classes are imbalanced
+
+The full model is trained through a Scikit-learn pipeline containing:
+
+```text
+ColumnTransformer -> LogisticRegression
+```
+
+### Evaluation metrics
+
+The project reports several complementary metrics:
+
+| Metric | Purpose |
+|---|---|
+| Accuracy | Overall percentage of correct predictions |
+| Precision | Percentage of predicted churners who actually churned |
+| Recall | Percentage of actual churners correctly identified |
+| F1 score | Balance between churn precision and recall |
+| ROC-AUC | Ability to rank churners above non-churners across thresholds |
+| Average precision / PR-AUC | Performance focused on the positive churn class |
+| Balanced accuracy | Average recall across both classes |
+| Brier score | Quality of predicted probabilities |
+| Log loss | Penalty for incorrect and overconfident probabilities |
+
+---
+
+## Baseline Results
+
+The baseline Logistic Regression model produced the following test-set results:
+
+| Metric | Score |
+|---|---:|
+| Accuracy | 0.8055 |
+| Precision | 0.6572 |
+| Recall | 0.5588 |
+| F1 score | 0.6040 |
+| ROC-AUC | 0.8420 |
+
+### Initial interpretation
+
+The model correctly classifies approximately **80.6%** of test customers and demonstrates good ranking ability with a **ROC-AUC of 0.8420**.
+
+However, the churn recall of **0.5588** means that the default `0.50` classification threshold identifies only about 56% of the customers who actually churned. This is important because missed churners represent customers who would not be targeted by a retention campaign.
+
+The baseline therefore provides a useful starting point, but further improvement should focus on the balance between:
+
+- Correctly detecting more churners
+- Limiting unnecessary retention interventions for customers who would not churn
+
+---
+
+## Model Improvements
+
+The improved workflow extends the baseline with more rigorous model selection and evaluation.
+
+### Stratified cross-validation
+
+`StratifiedKFold` preserves the churn distribution across validation folds and provides a more reliable estimate of model performance than a single train/test split alone.
+
+### Hyperparameter tuning
+
+`GridSearchCV` evaluates combinations of Logistic Regression settings such as:
+
+- Regularization strength
+- Penalty type
+- Solver compatibility
+- Class weighting
+
+The best configuration is selected using a churn-relevant validation metric rather than relying only on training accuracy.
+
+### Threshold optimization
+
+Logistic Regression produces probabilities, while the default classifier converts probabilities into labels using a threshold of `0.50`.
+
+The improved analysis evaluates alternative thresholds to determine whether a lower or higher cutoff provides a better business tradeoff. Threshold selection is performed using validation predictions instead of the final test set to reduce test-set overfitting.
+
+Possible threshold objectives include:
+
+- Maximizing F1 score
+- Improving churn recall
+- Maximizing balanced accuracy
+- Selecting the best precision-recall tradeoff
+- Applying a business-defined cost to false negatives and false positives
+
+### Probability evaluation
+
+The improved analysis may also include:
+
+- Precision-recall curves
+- Calibration analysis
+- Brier score
+- Log loss
+- Cumulative gains
+- Lift analysis
+
+These outputs help determine whether predicted probabilities are useful for ranking and prioritizing customers, even when a single classification threshold is not sufficient.
+
+### Feature interpretation
+
+The model's coefficients are exported and visualized. Positive coefficients increase the model's estimated churn risk, while negative coefficients reduce it, after accounting for the preprocessing and reference categories used by the model.
+
+Coefficient magnitude should be interpreted carefully because one-hot encoding, regularization, correlated features, and scaling can affect the values.
+
+---
+
+## Generated Outputs
+
+### Baseline results
+
+The baseline script creates a `results/` directory containing outputs such as:
+
+```text
+results/
+├── metrics.csv
+├── confusion_matrix.png
+├── roc_curve.png
+├── feature_coefficients.csv
+└── test_predictions.csv
+```
+
+### Improved analysis
+
+The improved workflow creates a `results_improved/` directory containing model-comparison and diagnostic outputs such as:
+
+```text
+results_improved/
+├── model_comparison.csv
+├── metrics_comparison.png
+├── confusion_matrix_baseline.png
+├── confusion_matrix_improved.png
+├── roc_comparison.png
+├── precision_recall_comparison.png
+├── threshold_analysis.png
+├── cross_validation_summary.csv
+├── grid_search_results.csv
+├── improved_feature_coefficients.csv
+├── top_feature_coefficients.png
+└── final_test_predictions.csv
+```
+
+Depending on the final script version, additional calibration, gains, lift, or probability-quality plots may also be generated.
 
 ---
 
 ## Repository Structure
 
 ```text
-netflix-churn-predictor-main/
-├── orig_data/
-│   ├── README.md
-│   ├── users.csv
-│   ├── movies.csv
-│   ├── watch_history.csv
-│   ├── reviews.csv
-│   ├── recommendation_logs.csv
-│   └── search_logs.csv
-│
-├── cleaned_data/
-│   ├── users_clean.csv
-│   ├── movies_clean.csv
-│   ├── watch_history_clean.csv
-│   ├── reviews_clean.csv
-│   ├── recommendation_logs_clean.csv
-│   ├── search_logs_clean.csv
-│   └── users_merged.csv
-│
-├── data_cleaning.ipynb   # Cleaning, validation, and cleaned exports
-├── data_merge.ipynb      # User-level feature engineering and merging
-├── EDA.ipynb             # EDA of the engineered Netflix-style dataset
-├── eda-telco.ipynb       # Reference EDA using an external Telco churn dataset
-└── .gitignore
+telco-churn-logistic-regression/
+├── WA_Fn-UseC_-Telco-Customer-Churn.csv
+├── churn_logistic_regression.py
+├── improved_logistic_regression.py
+├── README.md
+├── requirements.txt
+├── results/
+│   ├── metrics.csv
+│   ├── confusion_matrix.png
+│   ├── roc_curve.png
+│   ├── feature_coefficients.csv
+│   └── test_predictions.csv
+└── results_improved/
+    ├── model_comparison.csv
+    ├── metrics_comparison.png
+    ├── confusion_matrix_baseline.png
+    ├── confusion_matrix_improved.png
+    ├── roc_comparison.png
+    ├── precision_recall_comparison.png
+    ├── threshold_analysis.png
+    ├── cross_validation_summary.csv
+    ├── grid_search_results.csv
+    ├── improved_feature_coefficients.csv
+    ├── top_feature_coefficients.png
+    └── final_test_predictions.csv
 ```
 
----
-
-## Data Cleaning
-
-The `data_cleaning.ipynb` notebook processes every raw table separately and then performs cross-dataset integrity checks.
-
-### Users
-
-Key operations include:
-
-- Replacing invalid ages below 13 using subscription-plan group statistics.
-- Filling missing ages by subscription-plan mean.
-- Filling missing gender values with `Unknown`.
-- Investigating `monthly_spend` outliers using the IQR method.
-- Filling missing spending values using plan-level means calculated from non-extreme observations.
-- Filling missing household size by subscription-plan mean.
-- Removing duplicate `user_id` values.
-- Converting date columns to appropriate datetime types.
-
-### Movies
-
-Key operations include:
-
-- Filling missing secondary genres with `None`.
-- Setting missing season and episode counts to zero where appropriate.
-- Checking rating and metadata consistency.
-- Removing duplicate `movie_id` values.
-- Adding a `has_imdb_rating` indicator.
-
-### Watch history
-
-Key operations include:
-
-- Filling missing watch duration with the global median.
-- Filling missing progress percentage with the global median.
-- Preserving missing user ratings because most sessions do not include a rating.
-- Removing duplicate `session_id` values.
-- Validating positive durations, progress bounds, and user-rating ranges.
-
-A notable consistency issue was discovered: many rows marked as `completed` have progress below 90%, suggesting that `action` and `progress_percentage` should not be assumed to represent the same concept.
-
-### Reviews
-
-Key operations include:
-
-- Filling vote counts using rating-group statistics.
-- Filling sentiment scores using sentiment-group means.
-- Checking whether helpful votes exceed total votes.
-- Removing repeated user/movie review combinations.
-- Preserving domain-specific missingness where appropriate.
-
-### Recommendation logs
-
-Key operations include:
-
-- Filling missing recommendation scores by recommendation-type median.
-- Filling missing algorithm versions with `Unknown`.
-- Removing duplicate recommendation IDs.
-- Validating score and interaction fields.
-
-### Search logs
-
-Key operations include:
-
-- Mapping missing click positions to `0` when no result was clicked.
-- Filling missing search duration with the median.
-- Removing duplicate search IDs.
-- Detecting impossible clicks where the clicked position exceeds the number of returned results.
-- Replacing invalid click positions with `NaN`.
-
-### Cross-dataset validation
-
-The cleaning notebook verifies that foreign keys in behavioral tables map to valid entities:
-
-- `user_id` values must exist in the cleaned users table.
-- `movie_id` values must exist in the cleaned movies table.
-- Watch, review, recommendation, and search records are checked for orphaned references.
-
----
-
-## Feature Engineering
-
-The `data_merge.ipynb` notebook aggregates event-level activity into a single row per user.
-
-A fixed reference date is currently used:
-
-```python
-reference_date = pd.Timestamp("2025-12-31")
-```
-
-The final `users_merged.csv` contains **10,000 rows and 67 columns**.
-
-### Feature groups
-
-| Group | Examples |
-|---|---|
-| User/account | `age`, `subscription_plan`, `monthly_spend`, `tenure_days`, `is_active` |
-| Watch behavior | `total_sessions`, `unique_titles_watched`, `total_watch_minutes`, `avg_progress` |
-| Completion & frequency | `pct_completed`, `sessions_per_month`, `sessions_per_active_day` |
-| Content preference | `avg_imdb_watched`, `unique_genres`, `pct_originals` |
-| Watch recency | `first_watch_date`, `last_watch_date`, `days_since_last_watch` |
-| Reviews | `review_count`, `avg_review_rating`, `avg_sentiment`, `pct_positive_reviews` |
-| Review recency | `days_since_last_review`, `days_since_last_positive_review` |
-| Recommendations | `rec_count`, `rec_click_rate`, `avg_rec_score`, `days_since_last_rec_click` |
-| Search behavior | `search_count`, `search_click_rate`, `avg_click_position`, `avg_search_duration` |
-| Search frequency | `searches_per_month`, `searches_per_active_day`, `active_search_days` |
-| Activity flags | `has_watch_history`, `has_reviews`, `has_recs`, `has_searches` |
-
-### Missing-activity strategy
-
-The merge notebook distinguishes between missing data and lack of user activity:
-
-- Count features are filled with `0` when a user has no activity.
-- Engagement flags are created before other missing values are filled.
-- Recency fields for users who never performed an action are filled with `9999`.
-- Rate, average, and frequency features are generally filled with `0` when no activity exists.
-
-This approach preserves the difference between "unknown" and "never engaged," although the `9999` sentinel should be reconsidered before modeling.
-
----
-
-## Exploratory Data Analysis
-
-### `EDA.ipynb`
-
-This notebook analyzes the engineered Netflix-style user table and covers:
-
-- Missing-value patterns
-- Numerical summaries
-- Target distribution
-- Feature distributions
-- Active vs. inactive user comparisons
-- Correlation analysis
-- Multicollinearity checks
-- Modeling-readiness assessment
-
-The most important conclusion is that the current synthetic target has insufficient behavioral signal for meaningful churn modeling.
-
-### `eda-telco.ipynb`
-
-This notebook is a separate reference analysis built around an external Telco Customer Churn dataset. It explores:
-
-- Churn class imbalance
-- Contract type
-- Tenure
-- Internet service
-- Technical support
-- Payment method
-- Multi-feature churn interactions
-
-It is useful as a comparison case because real churn-oriented datasets typically show stronger relationships between customer behavior and the target than the current synthetic streaming label does.
-
-> [!NOTE]
-> `eda-telco.ipynb` is not part of the main Netflix-style processing pipeline and depends on an external Kaggle dataset.
+> Adjust the script names in this section if the files use different names in the final repository.
 
 ---
 
 ## Getting Started
 
-### 1. Clone or download the repository
+### 1. Clone the repository
 
 ```bash
 git clone <repository-url>
-cd netflix-churn-predictor-main
+cd telco-churn-logistic-regression
 ```
 
-Replace `<repository-url>` with the actual GitHub repository URL.
+Replace `<repository-url>` with the final GitHub repository URL.
 
 ### 2. Create a virtual environment
-
-#### macOS / Linux
-
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
 
 #### Windows PowerShell
 
 ```powershell
-python -m venv venv
-.\venv\Scripts\Activate.ps1
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 ```
 
-### 3. Install the main dependencies
+#### macOS or Linux
 
 ```bash
-pip install jupyter pandas numpy matplotlib seaborn
+python3 -m venv .venv
+source .venv/bin/activate
 ```
 
-For the optional Telco reference notebook, you may also need:
+### 3. Install dependencies
 
 ```bash
-pip install kagglehub
+pip install -r requirements.txt
 ```
 
-### 4. Start Jupyter
+A minimal installation can also be performed with:
 
 ```bash
-jupyter notebook
+pip install pandas numpy matplotlib scikit-learn
 ```
 
-Or, with JupyterLab:
+Install any additional visualization packages listed in the final script if required.
+
+### 4. Confirm the dataset location
+
+Place the dataset in the project root using the following filename:
+
+```text
+WA_Fn-UseC_-Telco-Customer-Churn.csv
+```
+
+### 5. Run the baseline model
 
 ```bash
-pip install jupyterlab
-jupyter lab
+python churn_logistic_regression.py
 ```
+
+### 6. Run the improved analysis
+
+```bash
+python improved_logistic_regression.py
+```
+
+The scripts print the main evaluation results in the terminal and save detailed files inside their corresponding results directories.
 
 ---
 
-## Recommended Notebook Order
+## Interpreting the Results
 
-Run the main notebooks in this order:
+### Confusion matrix
 
-### 1. Clean the raw datasets
+The confusion matrix separates predictions into:
 
-```text
-data_cleaning.ipynb
-```
+- **True negatives:** customers correctly predicted to stay
+- **False positives:** customers predicted to churn who actually stayed
+- **False negatives:** customers predicted to stay who actually churned
+- **True positives:** customers correctly predicted to churn
 
-Reads from:
+For retention use cases, false negatives can be especially costly because the company fails to identify a customer who leaves.
 
-```text
-orig_data/
-```
+### ROC curve
 
-Writes cleaned tables to:
+The ROC curve measures the tradeoff between the true-positive rate and false-positive rate across classification thresholds. A larger ROC-AUC indicates stronger ranking ability.
 
-```text
-cleaned_data/
-```
+### Precision-recall curve
 
-### 2. Engineer features and merge datasets
+The precision-recall curve is especially useful when the positive class is less common. It shows how churn precision changes as the model attempts to capture more churned customers.
 
-```text
-data_merge.ipynb
-```
+### Threshold analysis
 
-Reads the cleaned tables and creates:
+Changing the classification threshold changes the number of customers classified as churn risks:
 
-```text
-cleaned_data/users_merged.csv
-```
+- A lower threshold usually increases recall but reduces precision.
+- A higher threshold usually increases precision but reduces recall.
 
-### 3. Explore the final modeling table
+The best threshold depends on the retention budget and the relative business cost of missed churners versus unnecessary interventions.
 
-```text
-EDA.ipynb
-```
+### Feature coefficients
 
-Reads:
-
-```text
-cleaned_data/users_merged.csv
-```
-
-### 4. Optional reference analysis
-
-```text
-eda-telco.ipynb
-```
-
-This notebook uses an external Kaggle Telco Customer Churn dataset and is independent of the main pipeline.
-
----
-
-## Generated Outputs
-
-The primary modeling-ready artifact is:
-
-```text
-cleaned_data/users_merged.csv
-```
-
-Expected shape:
-
-```text
-10,000 rows x 67 columns
-```
-
-The file combines:
-
-- User demographics and account data
-- Subscription information
-- Watch engagement
-- Content preferences
-- Review behavior and sentiment
-- Recommendation exposure and clicks
-- Search activity
-- Frequency features
-- Recency features
-- Activity-presence flags
-- Churn target (`is_active`)
+Coefficient analysis can help identify the customer characteristics most strongly associated with estimated churn risk. These associations should not automatically be interpreted as causal effects.
 
 ---
 
 ## Known Limitations
 
-### 1. No trained prediction model yet
+### 1. Single historical dataset
 
-Despite the repository name, the current project stops at EDA and modeling-readiness assessment. There is no committed training, validation, or inference pipeline yet.
+The model is trained and evaluated on one customer dataset. Performance may change when applied to customers from another company, region, or time period.
 
-### 2. Weak synthetic target signal
+### 2. Observational relationships
 
-The largest limitation is that `is_active` appears largely independent of the engineered behavioral variables. A high-performing model should not be expected without changing the data-generation process or redefining the target.
+The model identifies predictive associations, not causal relationships. A variable with a strong coefficient does not necessarily cause churn.
 
-### 3. Hard-coded reference date
+### 3. Class imbalance
 
-Feature recency calculations currently use:
+Because churned customers are the minority class, a model can obtain reasonable accuracy while still missing many churners. Class-specific metrics must be monitored.
 
-```text
-2025-12-31
-```
+### 4. Threshold depends on business costs
 
-For production or repeated experiments, this should become a configurable parameter.
+A statistically optimized threshold may not be the best operational threshold. The final decision should consider campaign cost, customer value, intervention capacity, and the cost of a missed churner.
 
-### 4. Recency sentinel value
+### 5. No external validation
 
-Users with no historical event may receive:
+The model has not yet been evaluated on a separate dataset from another period or telecommunications provider.
 
-```text
-9999
-```
+### 6. No production deployment
 
-for `days_since_*` features. This preserves a "never engaged" state but can distort linear and distance-based models. A separate binary indicator plus imputation may be more robust.
+The project currently performs offline training and evaluation. It does not yet include a production API, automated retraining, data-drift monitoring, or a live retention dashboard.
 
-### 5. Remaining outliers
+### 7. Possible feature changes over time
 
-EDA identified unresolved extreme values, including:
-
-- Very high `monthly_spend`
-- Ages above 100
-
-These should be handled intentionally before linear modeling.
-
-### 6. Potential multicollinearity
-
-Examples identified during EDA include:
-
-- `avg_sentiment` vs. `avg_review_rating`
-- `total_sessions` vs. `total_watch_minutes`
-
-Feature selection or regularization should be considered.
-
-### 7. Repository-level environment specification
-
-The project currently does not include a root `requirements.txt`, `environment.yml`, or `pyproject.toml`. Adding one would improve reproducibility.
+Customer behavior and service offerings can change. A production model would require periodic monitoring for data drift and model-performance degradation.
 
 ---
 
@@ -535,18 +513,20 @@ The project currently does not include a root `requirements.txt`, `environment.y
 
 Recommended next steps:
 
-- [ ] Improve or regenerate the churn target so it depends on meaningful behavioral patterns.
-- [ ] Add a reproducible dependency file such as `requirements.txt`.
-- [ ] Move repeated cleaning logic into reusable Python modules.
-- [ ] Make the feature-engineering reference date configurable.
-- [ ] Add a formal train/validation/test split.
-- [ ] Establish a baseline model with Logistic Regression.
-- [ ] Compare tree-based models such as Random Forest, XGBoost, or LightGBM.
-- [ ] Handle target imbalance with class weights and appropriate evaluation metrics.
-- [ ] Evaluate with ROC-AUC, PR-AUC, recall, precision, and F1 score rather than accuracy alone.
-- [ ] Add feature importance and SHAP-based interpretation.
-- [ ] Add automated data-quality tests.
-- [ ] Add a small inference script or API after a valid model is established.
+- [x] Clean the Telco Customer Churn dataset.
+- [x] Build a preprocessing pipeline for numerical and categorical features.
+- [x] Train a Logistic Regression baseline.
+- [x] Generate a confusion matrix and ROC curve.
+- [x] Export model metrics, coefficients, and customer predictions.
+- [x] Add stratified cross-validation and hyperparameter tuning.
+- [x] Compare the default and optimized classification thresholds.
+- [ ] Finalize the threshold using explicit business costs.
+- [ ] Compare Logistic Regression with Random Forest and gradient-boosting models.
+- [ ] Add SHAP or another model-explanation method for nonlinear models.
+- [ ] Validate the selected model on out-of-time or external data.
+- [ ] Add automated data-quality and model-performance tests.
+- [ ] Create a customer-risk dashboard or reporting interface.
+- [ ] Package the final model for batch or API-based inference.
 
 ---
 
@@ -554,27 +534,26 @@ Recommended next steps:
 
 | Component | Status |
 |---|---|
-| Raw dataset ingestion | Complete |
-| Data cleaning | Complete |
-| Duplicate handling | Complete |
-| Missing-value treatment | Complete |
-| Cross-table ID validation | Complete |
-| User-level feature engineering | Complete |
-| Final merged dataset | Complete |
-| Exploratory data analysis | Complete |
-| Target-signal assessment | Complete |
-| Model training | Not implemented |
-| Model evaluation | Not implemented |
-| Prediction API / deployment | Not implemented |
+| Dataset loading | Complete |
+| Data validation and cleaning | Complete |
+| Numerical preprocessing | Complete |
+| Categorical preprocessing | Complete |
+| Stratified train/test split | Complete |
+| Logistic Regression baseline | Complete |
+| Baseline evaluation | Complete |
+| Confusion-matrix visualization | Complete |
+| ROC analysis | Complete |
+| Hyperparameter tuning | Complete |
+| Cross-validation analysis | Complete |
+| Threshold analysis | Complete |
+| Feature-coefficient analysis | Complete |
+| External validation | Not implemented |
+| Production deployment | Not implemented |
 
 ---
 
-## Acknowledgments
+## Conclusion
 
-The main dataset is a synthetic Netflix-style streaming dataset designed for data science and machine-learning experimentation. Additional source details are documented in:
+This project demonstrates a complete and interpretable machine-learning workflow for Telco customer churn prediction. The Logistic Regression baseline provides good overall discrimination, while the improved workflow adds cross-validation, model tuning, threshold analysis, and richer evaluation outputs.
 
-```text
-orig_data/README.md
-```
-
-The Telco notebook is a separate reference analysis based on an external churn dataset and is not part of the primary Netflix-style pipeline.
+The most important modeling decision is not simply which model has the highest accuracy. A useful retention system must determine how aggressively to identify churn risks based on the business cost of missed churners, false alarms, and retention interventions.
