@@ -3,15 +3,14 @@
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
 ![Pandas](https://img.shields.io/badge/Pandas-Data%20Processing-150458?logo=pandas&logoColor=white)
 ![Scikit-learn](https://img.shields.io/badge/Scikit--learn-Machine%20Learning-F7931E?logo=scikitlearn&logoColor=white)
-![Matplotlib](https://img.shields.io/badge/Matplotlib-Visualization-11557C)
-![Project Status](https://img.shields.io/badge/Status-Modeling%20%26%20Evaluation-success)
+![XGBoost](https://img.shields.io/badge/XGBoost-Final%20Model-EB5B28)
+![Streamlit](https://img.shields.io/badge/Streamlit-Live%20Application-FF4B4B?logo=streamlit&logoColor=white)
+![Project Status](https://img.shields.io/badge/Status-Deployment%20Ready-success)
 
-An end-to-end machine-learning project for predicting customer churn in a telecommunications company using customer demographics, subscribed services, account information, contract details, and billing behavior.
-
-The project builds an interpretable **Logistic Regression** classifier, evaluates its ability to identify customers at risk of leaving, and produces professional visual and tabular outputs for model analysis.
+An end-to-end machine-learning project for predicting customer churn in a telecommunications company. The project compares **Logistic Regression**, **Random Forest**, and **XGBoost**, then deploys the selected XGBoost model through an interactive Streamlit application.
 
 > [!IMPORTANT]
-> The primary objective is not only to maximize overall accuracy, but also to improve the identification of churned customers. For this reason, the project evaluates precision, recall, F1 score, ROC-AUC, and confusion matrices in addition to accuracy.
+> The goal is not simply to maximize accuracy. In a retention use case, false negatives represent customers who are likely to leave but are not identified by the model. For that reason, the project evaluates precision, recall, F1 score, ROC-AUC, confusion matrices, and threshold tradeoffs.
 
 ---
 
@@ -20,12 +19,14 @@ The project builds an interpretable **Logistic Regression** classifier, evaluate
 - [Project Overview](#project-overview)
 - [Business Problem](#business-problem)
 - [Dataset](#dataset)
-- [Machine-Learning Pipeline](#machine-learning-pipeline)
+- [End-to-End Pipeline](#end-to-end-pipeline)
 - [Data Preparation](#data-preparation)
-- [Modeling Approach](#modeling-approach)
-- [Baseline Results](#baseline-results)
-- [Model Improvements](#model-improvements)
-- [Generated Outputs](#generated-outputs)
+- [Models Evaluated](#models-evaluated)
+- [Why XGBoost Was Selected](#why-xgboost-was-selected)
+- [Model Comparison](#model-comparison)
+- [Streamlit Application](#streamlit-application)
+- [Deployment Architecture](#deployment-architecture)
+- [Live Demo](#live-demo)
 - [Repository Structure](#repository-structure)
 - [Getting Started](#getting-started)
 - [Interpreting the Results](#interpreting-the-results)
@@ -36,63 +37,60 @@ The project builds an interpretable **Logistic Regression** classifier, evaluate
 
 ## Project Overview
 
-Customer churn occurs when a customer stops using a company's services. In the telecommunications industry, predicting churn can help a company identify customers who may leave and take retention action before the cancellation occurs.
+Customer churn occurs when a customer stops using a company's services. Predicting churn can help a telecommunications company identify at-risk customers and take retention action before cancellation.
 
-The target variable in this project is:
+The target variable is converted into a binary outcome:
 
 ```text
-Churn
+0 = customer remained with the company
+1 = customer churned
 ```
 
-The target is converted into a binary variable:
+The project includes the following stages:
 
-- `0` = customer remained with the company
-- `1` = customer churned
-
-The dataset contains **7,043 customer records and 21 original columns**. Each row represents one customer.
-
-The project focuses on the following stages:
-
-1. Load and inspect the Telco Customer Churn dataset.
-2. Clean invalid or missing values.
-3. Separate numerical and categorical variables.
-4. Build a reusable preprocessing and modeling pipeline.
-5. Train a Logistic Regression baseline model.
-6. Evaluate classification performance using multiple metrics.
-7. Tune model hyperparameters and decision thresholds.
-8. Generate visualizations and CSV reports for further analysis.
+1. Explore and validate the Telco Customer Churn dataset.
+2. Clean invalid and missing values.
+3. Engineer model-ready numerical and categorical features.
+4. Create a stratified train/test split.
+5. Train and evaluate Logistic Regression, Random Forest, and XGBoost.
+6. Compare threshold-dependent business tradeoffs.
+7. Freeze the selected model and its feature schema.
+8. Serve predictions through a Streamlit application.
+9. Prepare the application for cloud deployment and live demonstration.
 
 ---
 
 ## Business Problem
 
-Customer acquisition is often more expensive than customer retention. A churn-prediction model can support retention teams by ranking customers according to their estimated risk of leaving.
+Customer acquisition is often more expensive than customer retention. A churn-prediction system can support retention teams by ranking customers according to their estimated risk of leaving.
 
-A useful churn model should answer questions such as:
+The project is designed to answer questions such as:
 
 - Which customers have the highest probability of churning?
-- Which account or service characteristics are associated with churn?
-- How many churned customers can the model correctly identify?
-- What tradeoff exists between capturing more churners and generating more false alarms?
-- Which decision threshold is most appropriate for a retention campaign?
+- Which account, contract, billing, or service characteristics are most useful for prediction?
+- How many actual churners does each model identify?
+- How many false alarms are generated by the selected threshold?
+- Which model and threshold provide the most useful business tradeoff?
 
-This project treats churn prediction as a **binary classification problem**.
+This is treated as a **binary classification problem**.
 
 ---
 
 ## Dataset
 
-The project uses the Telco Customer Churn dataset stored as:
+The project uses the Telco Customer Churn dataset stored at:
 
 ```text
-WA_Fn-UseC_-Telco-Customer-Churn.csv
+telco-data/WA_Fn-UseC_-Telco-Customer-Churn.csv
 ```
 
 ### Dataset dimensions
 
 ```text
-7,043 rows x 21 columns
+7,043 rows x 21 original columns
 ```
+
+Each row represents one customer.
 
 ### Feature groups
 
@@ -106,39 +104,43 @@ WA_Fn-UseC_-Telco-Customer-Churn.csv
 | Billing information | `MonthlyCharges`, `TotalCharges` |
 | Target | `Churn` |
 
-### Target imbalance
+### Class imbalance
 
-The dataset contains more non-churn customers than churn customers. Because of this imbalance, accuracy alone can provide an incomplete picture of model performance.
-
-The analysis therefore places special attention on:
+The dataset contains more non-churn customers than churn customers. Accuracy alone can therefore hide poor performance on the churn class. The analysis places special attention on:
 
 - Churn recall
 - Churn precision
 - F1 score
 - ROC-AUC
-- Precision-recall behavior
-- Confusion-matrix errors
+- False negatives
+- False positives
+- Confusion-matrix behavior
 
 ---
 
-## Machine-Learning Pipeline
+## End-to-End Pipeline
 
 ```mermaid
 flowchart LR
-    A[Telco CSV Dataset] --> B[Data Validation and Cleaning]
-    B --> C[Train/Test Split]
-    C --> D[ColumnTransformer]
-    D --> E1[Numerical Imputation and Scaling]
-    D --> E2[Categorical Imputation and One-Hot Encoding]
-    E1 --> F[Logistic Regression]
+    A[Raw Telco CSV] --> B[Data Validation and Cleaning]
+    B --> C[Feature Engineering]
+    C --> D[Stratified Train/Test Split]
+
+    D --> E1[Logistic Regression]
+    D --> E2[Random Forest]
+    D --> E3[XGBoost]
+
+    E1 --> F[Model and Threshold Evaluation]
     E2 --> F
-    F --> G[Probability Predictions]
-    G --> H[Model Evaluation]
-    H --> I[Metrics, Charts, and Predictions]
-    H --> J[Hyperparameter and Threshold Optimization]
+    E3 --> F
+
+    F --> G[XGBoost Selected for Deployment]
+    G --> H[Saved Model and Feature Artifacts]
+    H --> I[Streamlit Application]
+    I --> J[Customer Churn Risk Estimate]
 ```
 
-The preprocessing steps and Logistic Regression model are placed inside a Scikit-learn `Pipeline`. This reduces data leakage risk and ensures that the same transformations are applied consistently during training, cross-validation, testing, and future predictions.
+The model artifact, feature order, metadata, and test predictions are saved separately so that the Streamlit application uses the same schema as training.
 
 ---
 
@@ -146,233 +148,245 @@ The preprocessing steps and Logistic Regression model are placed inside a Scikit
 
 ### Customer identifier
 
-`customerID` is an identifier rather than a predictive customer characteristic, so it is removed from the model features and retained only when useful for associating predictions with customers.
+`customerID` is an identifier rather than a predictive customer characteristic. It is excluded from model training but retained when useful for connecting test predictions to customer records.
 
 ### Total charges
 
-`TotalCharges` may be loaded as text because some records contain blank values. The project converts it to a numerical column:
+`TotalCharges` may be loaded as text because some records contain blank values. It is converted to a numeric field:
 
 ```python
 pd.to_numeric(df["TotalCharges"], errors="coerce")
 ```
 
-Invalid or blank values become missing values and are handled inside the preprocessing pipeline.
+Invalid or blank values become missing values and are handled during preprocessing.
 
 ### Target conversion
-
-The `Churn` column is converted from `Yes` and `No` values into binary labels:
 
 ```text
 Yes -> 1
 No  -> 0
 ```
 
-### Numerical preprocessing
+### Feature engineering
 
-Numerical variables are processed using:
+The deployment pipeline produces a fixed **23-feature schema** containing numerical values and encoded service/account indicators. The exact order is stored in:
 
-- Median imputation for missing values
-- Standardization with `StandardScaler`
+```text
+artifacts/feature_columns.json
+```
 
-### Categorical preprocessing
-
-Categorical variables are processed using:
-
-- Most-frequent imputation
-- One-hot encoding
-- Safe handling of categories that were not present during training
+This prevents training-serving skew by ensuring that the application passes features to XGBoost in the same order used during training.
 
 ### Train/test split
 
-The dataset is divided into training and testing sets using stratification so that both subsets preserve approximately the same churn proportion.
+The repository contains a locked holdout set of **1,409 customers**. These records are not used to fit the final deployment model and are used to report the application metrics.
 
 ---
 
-## Modeling Approach
+## Models Evaluated
 
-### Baseline model
+### Logistic Regression
 
-The baseline classifier is Logistic Regression. It was selected because it:
+Logistic Regression was used as the interpretable baseline because it:
 
-- Provides a strong and interpretable classification baseline
-- Produces churn probabilities
-- Works well with standardized numerical variables and one-hot encoded categories
-- Allows coefficients to be examined to understand model behavior
-- Can incorporate class weighting when churn classes are imbalanced
+- Produces customer-level churn probabilities.
+- Provides a clear linear baseline.
+- Works well with scaled numerical variables and encoded categorical variables.
+- Allows coefficients to be inspected.
+- Makes threshold behavior easy to explain.
 
-The full model is trained through a Scikit-learn pipeline containing:
+Its main limitation is that it assumes a linear relationship in the transformed feature space unless interactions are manually added.
+
+### Random Forest
+
+Random Forest was evaluated as a nonlinear tree ensemble because it:
+
+- Captures nonlinear patterns and feature interactions.
+- Is less dependent on scaling assumptions.
+- Provides feature-importance estimates.
+- Can model heterogeneous customer segments.
+
+The initial forest showed a large train/test accuracy gap, so depth, leaf size, class weighting, and decision thresholds were evaluated to reduce overfitting and improve churn recall.
+
+### XGBoost
+
+XGBoost was evaluated as a boosted-tree model because it:
+
+- Builds trees sequentially so later trees focus on earlier errors.
+- Captures nonlinear relationships and feature interactions.
+- Includes regularization and other controls for model complexity.
+- Produces churn probabilities that can be converted into business decisions using a configurable threshold.
+- Can be saved as a portable model artifact and loaded directly by the Streamlit application.
+
+---
+
+## Why XGBoost Was Selected
+
+XGBoost was selected as the **deployment model**, not because it dominates every metric at every threshold, but because it provides the operating tradeoff chosen for the churn use case.
+
+The deployed model uses a fixed threshold of **0.60** and identifies approximately **71.1% of actual churners** in the locked test set. Compared with the default Logistic Regression operating point, this reduces the number of missed churners from approximately **165 to 108**. Compared with the selected precision-constrained Random Forest operating point, it identifies more churners, while accepting additional false-positive retention contacts.
+
+The decision reflects four design priorities:
+
+1. **Reduce missed churners.** False negatives represent customers who leave without being flagged for intervention.
+2. **Capture nonlinear behavior.** Contract type, tenure, internet service, payment method, and support features may interact in ways that a linear baseline cannot represent directly.
+3. **Use probability-based decisions.** The threshold can be adjusted later based on retention budget, customer lifetime value, and intervention capacity.
+4. **Support reproducible deployment.** The model, feature order, threshold, metadata, and test predictions are frozen as versioned artifacts used by the Streamlit interface.
+
+> [!NOTE]
+> Model selection is business-dependent. Logistic Regression retains advantages in interpretability and default-threshold accuracy, while Random Forest offers a competitive alternative. Before the final presentation, all three models should be rerun on the same frozen split and their final approved operating thresholds should be confirmed.
+
+---
+
+## Model Comparison
+
+The following table summarizes representative test-set operating points currently documented in the repository.
+
+| Model | Threshold | Accuracy | Precision | Recall | F1 score | ROC-AUC | False negatives | False positives |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Logistic Regression baseline | 0.50 | 80.6% | 65.7% | 55.9% | 0.604 | 0.842 | 165 | 109 |
+| Random Forest, precision-constrained | 0.61 | 77.9% | 57.4% | 65.5% | 0.612 | 0.831 | 129 | 182 |
+| **XGBoost deployment model** | **0.60** | **76.1%** | **53.7%** | **71.1%** | **0.612** | **0.829** | **108** | **229** |
+
+### Interpretation
+
+- Logistic Regression has the strongest accuracy, precision, and ROC-AUC at its default threshold, but it misses more churners.
+- Random Forest provides a middle operating point with fewer false positives than the deployed XGBoost model.
+- XGBoost produces the highest churn recall among the operating points shown and the fewest false negatives, which aligns with the project's retention-focused objective.
+- The XGBoost tradeoff is a larger number of false positives. In practice, the final threshold should reflect the cost and capacity of the retention campaign.
+
+Thresholds affect precision, recall, and error counts. The comparison should therefore be interpreted as a comparison of **model-plus-threshold decisions**, not just model algorithms in isolation.
+
+---
+
+## Streamlit Application
+
+The Streamlit application is implemented in:
 
 ```text
-ColumnTransformer -> LogisticRegression
+app.py
 ```
 
-### Evaluation metrics
+It contains three main sections.
 
-The project reports several complementary metrics:
+### A. Customer churn prediction
 
-| Metric | Purpose |
-|---|---|
-| Accuracy | Overall percentage of correct predictions |
-| Precision | Percentage of predicted churners who actually churned |
-| Recall | Percentage of actual churners correctly identified |
-| F1 score | Balance between churn precision and recall |
-| ROC-AUC | Ability to rank churners above non-churners across thresholds |
-| Average precision / PR-AUC | Performance focused on the positive churn class |
-| Balanced accuracy | Average recall across both classes |
-| Brier score | Quality of predicted probabilities |
-| Log loss | Penalty for incorrect and overconfident probabilities |
+A user enters the available information for one customer and selects **Estimate churn risk**. The application:
+
+1. Validates the form values.
+2. Applies the deployment preprocessing logic.
+3. Reorders the engineered features using the saved feature schema.
+4. Loads the saved XGBoost model.
+5. Calculates churn probability.
+6. Applies the fixed 0.60 decision threshold.
+7. Displays the estimated risk and prediction result.
+
+### B. Test predictions explorer
+
+The application displays the locked test-set predictions and supports filters for:
+
+- Correct or incorrect predictions
+- Actual churn outcome
+- Predicted churn outcome
+
+Users can also download the filtered records as a CSV file.
+
+### C. Model effectiveness
+
+The dashboard reports:
+
+- Accuracy
+- Precision
+- Recall
+- F1 score
+- ROC-AUC
+- Confusion matrix
+- Top XGBoost feature importances
 
 ---
 
-## Baseline Results
+## Deployment Architecture
 
-The baseline Logistic Regression model produced the following test-set results:
+```mermaid
+flowchart LR
+    A[Customer Information] --> B[Streamlit Form]
+    B --> C[Input Validation]
+    C --> D[Feature Preprocessing]
+    D --> E[23-Feature Schema]
+    E --> F[Saved XGBoost Model]
+    F --> G[Churn Probability]
+    G --> H{Probability >= 0.60?}
+    H -->|Yes| I[Predicted Churn Risk]
+    H -->|No| J[Predicted to Stay]
+```
 
-| Metric | Score |
-|---|---:|
-| Accuracy | 0.8055 |
-| Precision | 0.6572 |
-| Recall | 0.5588 |
-| F1 score | 0.6040 |
-| ROC-AUC | 0.8420 |
-
-### Initial interpretation
-
-The model correctly classifies approximately **80.6%** of test customers and demonstrates good ranking ability with a **ROC-AUC of 0.8420**.
-
-However, the churn recall of **0.5588** means that the default `0.50` classification threshold identifies only about 56% of the customers who actually churned. This is important because missed churners represent customers who would not be targeted by a retention campaign.
-
-The baseline therefore provides a useful starting point, but further improvement should focus on the balance between:
-
-- Correctly detecting more churners
-- Limiting unnecessary retention interventions for customers who would not churn
+The first deployment version does not require a separate FastAPI service or Docker container. Streamlit loads the frozen model and supporting artifacts directly.
 
 ---
 
-## Model Improvements
+## Live Demo
 
-The improved workflow extends the baseline with more rigorous model selection and evaluation.
+### Links
 
-### Stratified cross-validation
+- **Live Streamlit application:** Add the deployed application URL here.
+- **Presentation slides:** Add the final slide deck URL here.
+- **Recorded demonstration:** Add the recording URL here if available.
 
-`StratifiedKFold` preserves the churn distribution across validation folds and provides a more reliable estimate of model performance than a single train/test split alone.
+### Suggested 1–2 minute demonstration
 
-### Hyperparameter tuning
+1. Open the deployed Streamlit application.
+2. Briefly explain the 0.60 threshold and the customer input form.
+3. Enter a high-risk profile, such as a newer month-to-month customer using electronic check.
+4. Select **Estimate churn risk** and explain the resulting probability.
+5. Show the test predictions explorer and filter to incorrect predictions.
+6. Show the model metrics, confusion matrix, and top features.
+7. Conclude by explaining the false-negative versus false-positive business tradeoff.
 
-`GridSearchCV` evaluates combinations of Logistic Regression settings such as:
+### Demo fallback plan
 
-- Regularization strength
-- Penalty type
-- Solver compatibility
-- Class weighting
+To avoid presentation problems caused by internet or hosting issues, prepare:
 
-The best configuration is selected using a churn-relevant validation metric rather than relying only on training accuracy.
-
-### Threshold optimization
-
-Logistic Regression produces probabilities, while the default classifier converts probabilities into labels using a threshold of `0.50`.
-
-The improved analysis evaluates alternative thresholds to determine whether a lower or higher cutoff provides a better business tradeoff. Threshold selection is performed using validation predictions instead of the final test set to reduce test-set overfitting.
-
-Possible threshold objectives include:
-
-- Maximizing F1 score
-- Improving churn recall
-- Maximizing balanced accuracy
-- Selecting the best precision-recall tradeoff
-- Applying a business-defined cost to false negatives and false positives
-
-### Probability evaluation
-
-The improved analysis may also include:
-
-- Precision-recall curves
-- Calibration analysis
-- Brier score
-- Log loss
-- Cumulative gains
-- Lift analysis
-
-These outputs help determine whether predicted probabilities are useful for ranking and prioritizing customers, even when a single classification threshold is not sufficient.
-
-### Feature interpretation
-
-The model's coefficients are exported and visualized. Positive coefficients increase the model's estimated churn risk, while negative coefficients reduce it, after accounting for the preprocessing and reference categories used by the model.
-
-Coefficient magnitude should be interpreted carefully because one-hot encoding, regularization, correlated features, and scaling can affect the values.
-
----
-
-## Generated Outputs
-
-### Baseline results
-
-The baseline script creates a `results/` directory containing outputs such as:
-
-```text
-results/
-├── metrics.csv
-├── confusion_matrix.png
-├── roc_curve.png
-├── feature_coefficients.csv
-└── test_predictions.csv
-```
-
-### Improved analysis
-
-The improved workflow creates a `results_improved/` directory containing model-comparison and diagnostic outputs such as:
-
-```text
-results_improved/
-├── model_comparison.csv
-├── metrics_comparison.png
-├── confusion_matrix_baseline.png
-├── confusion_matrix_improved.png
-├── roc_comparison.png
-├── precision_recall_comparison.png
-├── threshold_analysis.png
-├── cross_validation_summary.csv
-├── grid_search_results.csv
-├── improved_feature_coefficients.csv
-├── top_feature_coefficients.png
-└── final_test_predictions.csv
-```
-
-Depending on the final script version, additional calibration, gains, lift, or probability-quality plots may also be generated.
+- A short screen recording of the complete workflow
+- Screenshots of each application section
+- A slide containing the model metrics and confusion matrix
+- A QR code and clickable link to the deployed application
 
 ---
 
 ## Repository Structure
 
 ```text
-telco-churn-logistic-regression/
-├── WA_Fn-UseC_-Telco-Customer-Churn.csv
-├── churn_logistic_regression.py
-├── improved_logistic_regression.py
-├── README.md
-├── requirements.txt
-├── results/
-│   ├── metrics.csv
-│   ├── confusion_matrix.png
-│   ├── roc_curve.png
-│   ├── feature_coefficients.csv
+telco-churn-predictor/
+├── .streamlit/
+│   └── config.toml
+├── artifacts/
+│   ├── feature_columns.json
+│   ├── feature_importance.csv
+│   ├── meta.json
 │   └── test_predictions.csv
-└── results_improved/
-    ├── model_comparison.csv
-    ├── metrics_comparison.png
-    ├── confusion_matrix_baseline.png
-    ├── confusion_matrix_improved.png
-    ├── roc_comparison.png
-    ├── precision_recall_comparison.png
-    ├── threshold_analysis.png
-    ├── cross_validation_summary.csv
-    ├── grid_search_results.csv
-    ├── improved_feature_coefficients.csv
-    ├── top_feature_coefficients.png
-    └── final_test_predictions.csv
+├── models/
+│   └── xgboost_churn.json
+├── rf-docs/
+├── scripts/
+│   └── train_xgboost_artifacts.py
+├── src/
+│   ├── __init__.py
+│   └── preprocessing.py
+├── telco-data/
+│   ├── WA_Fn-UseC_-Telco-Customer-Churn.csv
+│   ├── X_train.csv
+│   ├── X_test.csv
+│   ├── y_train.csv
+│   └── y_test.csv
+├── app.py
+├── DEPLOYMENT.md
+├── eda-telco.ipynb
+├── feature-engineering.ipynb
+├── random-forest-model.ipynb
+├── xgboost.ipynb
+├── requirements.txt
+└── README.md
 ```
-
-> Adjust the script names in this section if the files use different names in the final repository.
 
 ---
 
@@ -381,13 +395,24 @@ telco-churn-logistic-regression/
 ### 1. Clone the repository
 
 ```bash
-git clone <repository-url>
-cd telco-churn-logistic-regression
+git clone https://github.com/abdonkath/telco-churn-predictor.git
+cd telco-churn-predictor
 ```
 
-Replace `<repository-url>` with the final GitHub repository URL.
+To test the Streamlit feature branch before it is merged:
+
+```bash
+git switch feature/streamlit-deployment
+```
 
 ### 2. Create a virtual environment
+
+#### Windows Command Prompt
+
+```cmd
+python -m venv .venv
+.venv\Scripts\activate
+```
 
 #### Windows PowerShell
 
@@ -409,35 +434,33 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-A minimal installation can also be performed with:
+### 4. Run the application
 
 ```bash
-pip install pandas numpy matplotlib scikit-learn
+streamlit run app.py
 ```
 
-Install any additional visualization packages listed in the final script if required.
+Or:
 
-### 4. Confirm the dataset location
+```bash
+python -m streamlit run app.py
+```
 
-Place the dataset in the project root using the following filename:
+The local application should become available at:
 
 ```text
-WA_Fn-UseC_-Telco-Customer-Churn.csv
+http://localhost:8501
 ```
 
-### 5. Run the baseline model
+### 5. Regenerate deployment artifacts
+
+The existing artifacts are already included for reproducible demonstration. To retrain and regenerate them from the repository's frozen training and testing files:
 
 ```bash
-python churn_logistic_regression.py
+python scripts/train_xgboost_artifacts.py
 ```
 
-### 6. Run the improved analysis
-
-```bash
-python improved_logistic_regression.py
-```
-
-The scripts print the main evaluation results in the terminal and save detailed files inside their corresponding results directories.
+Review metric changes before committing regenerated artifacts.
 
 ---
 
@@ -445,88 +468,62 @@ The scripts print the main evaluation results in the terminal and save detailed 
 
 ### Confusion matrix
 
-The confusion matrix separates predictions into:
-
 - **True negatives:** customers correctly predicted to stay
 - **False positives:** customers predicted to churn who actually stayed
 - **False negatives:** customers predicted to stay who actually churned
 - **True positives:** customers correctly predicted to churn
 
-For retention use cases, false negatives can be especially costly because the company fails to identify a customer who leaves.
+For retention use cases, false negatives can be especially costly because the company fails to identify a customer who leaves. False positives also matter because they may consume retention resources unnecessarily.
 
-### ROC curve
+### ROC-AUC
 
-The ROC curve measures the tradeoff between the true-positive rate and false-positive rate across classification thresholds. A larger ROC-AUC indicates stronger ranking ability.
-
-### Precision-recall curve
-
-The precision-recall curve is especially useful when the positive class is less common. It shows how churn precision changes as the model attempts to capture more churned customers.
+ROC-AUC measures the model's ability to rank churners above non-churners across classification thresholds. It should not be interpreted as the performance of one specific threshold.
 
 ### Threshold analysis
 
-Changing the classification threshold changes the number of customers classified as churn risks:
+- Lower thresholds generally increase recall and the number of customers contacted.
+- Higher thresholds generally increase precision but may miss more churners.
+- The best operational threshold depends on retention cost, campaign capacity, customer value, and the cost of a missed churner.
 
-- A lower threshold usually increases recall but reduces precision.
-- A higher threshold usually increases precision but reduces recall.
+### Feature importance
 
-The best threshold depends on the retention budget and the relative business cost of missed churners versus unnecessary interventions.
-
-### Feature coefficients
-
-Coefficient analysis can help identify the customer characteristics most strongly associated with estimated churn risk. These associations should not automatically be interpreted as causal effects.
+XGBoost feature importance indicates which engineered features contributed most strongly to the model's tree decisions. Importance values are useful for model inspection but should not automatically be interpreted as causal relationships.
 
 ---
 
 ## Known Limitations
 
-### 1. Single historical dataset
-
-The model is trained and evaluated on one customer dataset. Performance may change when applied to customers from another company, region, or time period.
-
-### 2. Observational relationships
-
-The model identifies predictive associations, not causal relationships. A variable with a strong coefficient does not necessarily cause churn.
-
-### 3. Class imbalance
-
-Because churned customers are the minority class, a model can obtain reasonable accuracy while still missing many churners. Class-specific metrics must be monitored.
-
-### 4. Threshold depends on business costs
-
-A statistically optimized threshold may not be the best operational threshold. The final decision should consider campaign cost, customer value, intervention capacity, and the cost of a missed churner.
-
-### 5. No external validation
-
-The model has not yet been evaluated on a separate dataset from another period or telecommunications provider.
-
-### 6. No production deployment
-
-The project currently performs offline training and evaluation. It does not yet include a production API, automated retraining, data-drift monitoring, or a live retention dashboard.
-
-### 7. Possible feature changes over time
-
-Customer behavior and service offerings can change. A production model would require periodic monitoring for data drift and model-performance degradation.
+1. **Single historical dataset:** performance may change across companies, regions, or time periods.
+2. **No causal interpretation:** the models identify predictive associations, not causes of churn.
+3. **Class imbalance:** accuracy can look acceptable even when churn recall is weak.
+4. **Threshold depends on business costs:** the current 0.60 threshold is a project decision, not a universal optimum.
+5. **No external validation:** the model has not been tested on another provider or a later time period.
+6. **No automated retraining or drift monitoring:** the deployed application uses a frozen model artifact.
+7. **Feature-importance limitations:** model importance does not measure causal impact and may be affected by correlated features.
+8. **Demonstration deployment:** the Streamlit app is a project demonstration, not a fully monitored production retention system.
 
 ---
 
 ## Roadmap
 
-Recommended next steps:
-
-- [x] Clean the Telco Customer Churn dataset.
-- [x] Build a preprocessing pipeline for numerical and categorical features.
+- [x] Clean and explore the Telco Customer Churn dataset.
+- [x] Engineer a fixed feature schema.
+- [x] Create stratified training and testing data.
 - [x] Train a Logistic Regression baseline.
-- [x] Generate a confusion matrix and ROC curve.
-- [x] Export model metrics, coefficients, and customer predictions.
-- [x] Add stratified cross-validation and hyperparameter tuning.
-- [x] Compare the default and optimized classification thresholds.
-- [ ] Finalize the threshold using explicit business costs.
-- [ ] Compare Logistic Regression with Random Forest and gradient-boosting models.
-- [ ] Add SHAP or another model-explanation method for nonlinear models.
-- [ ] Validate the selected model on out-of-time or external data.
-- [ ] Add automated data-quality and model-performance tests.
-- [ ] Create a customer-risk dashboard or reporting interface.
-- [ ] Package the final model for batch or API-based inference.
+- [x] Train and tune Random Forest models.
+- [x] Train and evaluate XGBoost.
+- [x] Compare model and threshold tradeoffs.
+- [x] Save the XGBoost deployment artifact.
+- [x] Build the Streamlit customer prediction form.
+- [x] Add the test prediction explorer.
+- [x] Add metrics, confusion matrix, and feature importance.
+- [x] Add local deployment instructions.
+- [ ] Confirm the final comparison table using one frozen evaluation protocol.
+- [ ] Deploy the Streamlit application publicly.
+- [ ] Add the public application link and QR code.
+- [ ] Add the presentation deck and recorded demonstration.
+- [ ] Add SHAP or another local explanation method.
+- [ ] Add automated tests, data-drift monitoring, and retraining workflows.
 
 ---
 
@@ -534,26 +531,28 @@ Recommended next steps:
 
 | Component | Status |
 |---|---|
-| Dataset loading | Complete |
-| Data validation and cleaning | Complete |
-| Numerical preprocessing | Complete |
-| Categorical preprocessing | Complete |
-| Stratified train/test split | Complete |
+| Dataset loading and validation | Complete |
+| Exploratory data analysis | Complete |
+| Feature engineering | Complete |
 | Logistic Regression baseline | Complete |
-| Baseline evaluation | Complete |
-| Confusion-matrix visualization | Complete |
-| ROC analysis | Complete |
-| Hyperparameter tuning | Complete |
-| Cross-validation analysis | Complete |
-| Threshold analysis | Complete |
-| Feature-coefficient analysis | Complete |
+| Random Forest evaluation | Complete |
+| XGBoost evaluation | Complete |
+| Model and threshold comparison | Complete; final team confirmation recommended |
+| Saved deployment model | Complete |
+| Streamlit prediction interface | Complete |
+| Test prediction explorer | Complete |
+| Metrics and model visualizations | Complete |
+| Local application testing | Complete |
+| Public Streamlit deployment | Pending |
 | External validation | Not implemented |
-| Production deployment | Not implemented |
+| Automated monitoring and retraining | Not implemented |
 
 ---
 
 ## Conclusion
 
-This project demonstrates a complete and interpretable machine-learning workflow for Telco customer churn prediction. The Logistic Regression baseline provides good overall discrimination, while the improved workflow adds cross-validation, model tuning, threshold analysis, and richer evaluation outputs.
+This project demonstrates a complete machine-learning workflow for telecommunications churn prediction, from data preparation and multi-model evaluation to an interactive deployment.
 
-The most important modeling decision is not simply which model has the highest accuracy. A useful retention system must determine how aggressively to identify churn risks based on the business cost of missed churners, false alarms, and retention interventions.
+Logistic Regression provides an interpretable baseline, Random Forest provides a nonlinear ensemble comparison, and XGBoost serves as the selected deployment model. The final choice reflects the project's emphasis on identifying more at-risk customers while making the cost of additional false positives explicit.
+
+The Streamlit application turns the model into a usable demonstration by allowing customer-level risk estimates, exploration of locked test predictions, and transparent review of the final model metrics.
