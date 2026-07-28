@@ -8,7 +8,7 @@
 
 An end-to-end machine-learning project for predicting customer churn in a telecommunications company using customer demographics, subscribed services, account information, contract details, and billing behavior.
 
-> **Interactive Streamlit deployment:** The public app uses the frozen XGBoost model under `models/` and the exact 23-feature preprocessing schema under `src/`. Logistic Regression remains the documented baseline for comparison. See `DEPLOYMENT.md` for local and cloud instructions.
+> **Interactive Streamlit deployment:** The app now serves the team's final XGBoost workflow from `xgboost_final.ipynb`, rebuilt with the supplied `Telco_customer_churn.csv` dataset. The model starts from 23 source features and uses 1,159 encoded columns at inference. See `DEPLOYMENT.md` for reproducibility and deployment details.
 
 The project builds an interpretable **Logistic Regression** classifier, evaluates its ability to identify customers at risk of leaving, and produces professional visual and tabular outputs for model analysis.
 

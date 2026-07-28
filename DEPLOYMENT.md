@@ -1,75 +1,65 @@
-# Streamlit Deployment Guide
+# Streamlit Deployment
 
-This repository contains a deployable Streamlit app for the frozen 23-feature
-XGBoost Telco churn model.
+The Streamlit app deploys the team's final XGBoost churn workflow from `xgboost_final.ipynb` using the Kaggle `Telco_customer_churn.csv` dataset supplied by the team.
 
-## Files used by the app
+## What is frozen for deployment
 
-- `app.py` — Streamlit entry point
-- `src/preprocessing.py` — converts business inputs to the exact 23 model features
-- `models/xgboost_churn.json` — frozen XGBoost model
-- `artifacts/meta.json` — threshold, metrics, feature order, and model metadata
+The app loads these committed artifacts at runtime:
+
+- `models/xgboost_churn.json` — saved XGBoost model
+- `artifacts/feature_columns.json` — exact 1,159-column encoded feature order
+- `artifacts/meta.json` — split information, threshold, and evaluation metrics
 - `artifacts/test_predictions.csv` — locked test-set explorer data
-- `artifacts/feature_importance.csv` — chart data
-- `requirements.txt` — cloud dependencies
+- `artifacts/feature_importance.csv` — model feature importance
+- `artifacts/location_lookup.csv` — city/ZIP/latitude/longitude lookup used by the form
 
-The app loads artifacts. It does not train the model during page startup.
+The source dataset used to rebuild the model is:
 
-## Run locally
+- `telco-data/Telco_customer_churn.csv`
 
-From the repository root:
-
-```bash
-python -m venv .venv
-```
-
-Windows PowerShell:
-
-```powershell
-.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-streamlit run app.py
-```
-
-macOS/Linux:
-
-```bash
-source .venv/bin/activate
-pip install -r requirements.txt
-streamlit run app.py
-```
-
-Open the local address printed by Streamlit, normally `http://localhost:8501`.
-
-## Regenerate the model artifacts
-
-Only do this when the team intentionally changes the frozen model:
+The training/export script is:
 
 ```bash
 python scripts/train_xgboost_artifacts.py
 ```
 
-After regeneration, run the app and compare a test-explorer record with the
-training output before committing the new artifacts.
+## Important reproducibility note
 
-## Deploy with Streamlit Community Cloud
+The team's notebook contained the final training code and saved output, but it did not commit the fitted in-memory XGBoost object as a model file. The deployment artifact in `models/` is therefore a reproducible rebuild using the exact team dataset, `random_state=47`, preprocessing, train/validation/test split, and final hyperparameters from `xgboost_final.ipynb`.
 
-1. Push the repository to GitHub.
-2. Sign in to Streamlit Community Cloud using the GitHub account that can access the repository.
-3. Create a new app and select the repository, branch, and `app.py` entry point.
-4. Deploy and wait for the dependency installation and app health check.
-5. Test the live prediction, test explorer, and model-effectiveness sections.
+XGBoost can produce small numerical/tree differences across library versions. The app always reports metrics from the exact saved artifact it is currently serving.
 
-## Recommended Git commit
+## Run locally
 
-```bash
-git add app.py src scripts models artifacts requirements.txt .streamlit DEPLOYMENT.md README.md
-git commit -m "Add XGBoost Streamlit deployment"
-git push
+### Windows
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+python -m streamlit run app.py
 ```
 
-## Important consistency rule
+### macOS / Linux
 
-`models/xgboost_churn.json`, `artifacts/meta.json`, and
-`src/preprocessing.py` must all use the same 23-feature order. Do not replace
-only one of these files with an artifact trained from a different dataset.
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python -m streamlit run app.py
+```
+
+Then open the local URL printed by Streamlit (normally `http://localhost:8501`).
+
+## Streamlit Community Cloud
+
+Deploy the repository and select `app.py` as the entry point. `requirements.txt` contains the runtime dependencies.
+
+## UI decision requested by the team
+
+The customer prediction section intentionally does **not** display the raw churn probability or a derived risk-level label. The probability is still calculated internally so the model can make its binary decision, but the live demo only shows:
+
+- `Model decision` — likely to leave / likely to stay
+- `Recommended business action`
+
+The test explorer and model-effectiveness sections remain available for technical review.

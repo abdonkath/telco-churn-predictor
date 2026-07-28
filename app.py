@@ -1,4 +1,4 @@
-"""Streamlit deployment for the frozen Telco churn XGBoost model."""
+"""Streamlit deployment for the team's final Telco churn XGBoost workflow."""
 
 from __future__ import annotations
 
@@ -11,8 +11,7 @@ import pandas as pd
 import streamlit as st
 from xgboost import XGBClassifier
 
-from src.preprocessing import FEATURE_COLUMNS, preprocess_customers
-
+from src.preprocessing import encode_customers
 
 ROOT = Path(__file__).resolve().parent
 ARTIFACTS = ROOT / "artifacts"
@@ -48,8 +47,17 @@ def load_model() -> XGBClassifier:
 
 @st.cache_data
 def load_metadata() -> dict:
-    path = ARTIFACTS / "meta.json"
-    return json.loads(path.read_text(encoding="utf-8"))
+    return json.loads((ARTIFACTS / "meta.json").read_text(encoding="utf-8"))
+
+
+@st.cache_data
+def load_feature_columns() -> list[str]:
+    return json.loads((ARTIFACTS / "feature_columns.json").read_text(encoding="utf-8"))
+
+
+@st.cache_data
+def load_location_lookup() -> pd.DataFrame:
+    return pd.read_csv(ARTIFACTS / "location_lookup.csv")
 
 
 @st.cache_data
@@ -66,9 +74,23 @@ def format_percent(value: float) -> str:
     return f"{value * 100:.1f}%"
 
 
+def humanize_feature(feature: str) -> str:
+    text = feature.replace("_", " ")
+    text = text.replace("Fiber optic", "Fiber optic")
+    return text
+
+
 def build_input_row() -> dict:
     st.subheader("Customer profile")
     st.caption("Enter the information currently available for one customer account.")
+
+    locations = load_location_lookup()
+    location_label = st.selectbox(
+        "Customer location (city / ZIP)",
+        locations["label"].tolist(),
+        help="ZIP code, latitude, and longitude are filled automatically from the team dataset.",
+    )
+    location = locations.loc[locations["label"] == location_label].iloc[0]
 
     demographic_1, demographic_2, demographic_3, demographic_4 = st.columns(4)
     with demographic_1:
@@ -89,11 +111,20 @@ def build_input_row() -> dict:
         paperless = st.selectbox("Paperless billing", ["Yes", "No"])
     with account_4:
         monthly_charges = st.number_input(
-            "Monthly charges ($)", min_value=0.0, max_value=200.0, value=70.0, step=0.50
+            "Monthly charges ($)", min_value=0.0, max_value=250.0, value=70.0, step=0.50
         )
 
-    billing_1, billing_2, billing_3 = st.columns(3)
+    billing_1, billing_2, billing_3, billing_4 = st.columns(4)
     with billing_1:
+        total_charges = st.number_input(
+            "Total charges ($)",
+            min_value=0.0,
+            max_value=10000.0,
+            value=840.0,
+            step=1.0,
+            help="Cumulative charges on the customer account.",
+        )
+    with billing_2:
         payment = st.selectbox(
             "Payment method",
             [
@@ -103,13 +134,13 @@ def build_input_row() -> dict:
                 "Credit card (automatic)",
             ],
         )
-    with billing_2:
-        phone = st.selectbox("Phone service", ["Yes", "No"])
     with billing_3:
+        phone = st.selectbox("Phone service", ["Yes", "No"])
+    with billing_4:
         multiple_lines = st.selectbox(
             "Multiple lines",
             ["No", "Yes"],
-            help="Ignored automatically when phone service is No.",
+            help="Handled automatically as 'No phone service' when phone service is No.",
         )
 
     internet_1, internet_2, internet_3, internet_4 = st.columns(4)
@@ -131,55 +162,54 @@ def build_input_row() -> dict:
         streaming_movies = st.selectbox("Streaming movies", ["No", "Yes"])
 
     return {
-        "gender": gender,
-        "SeniorCitizen": senior,
+        "City": str(location["City"]),
+        "Zip_Code": int(location["Zip Code"]),
+        "Latitude": float(location["Latitude"]),
+        "Longitude": float(location["Longitude"]),
+        "Gender": gender,
+        "Senior_Citizen": senior,
         "Partner": partner,
         "Dependents": dependents,
-        "tenure": int(tenure),
-        "PhoneService": phone,
-        "MultipleLines": multiple_lines,
-        "InternetService": internet,
-        "OnlineSecurity": online_security,
-        "OnlineBackup": online_backup,
-        "DeviceProtection": device_protection,
-        "TechSupport": tech_support,
-        "StreamingTV": streaming_tv,
-        "StreamingMovies": streaming_movies,
+        "Tenure_Months": int(tenure),
+        "Phone_Service": phone,
+        "Multiple_Lines": multiple_lines,
+        "Internet_Service": internet,
+        "Online_Security": online_security,
+        "Online_Backup": online_backup,
+        "Device_Protection": device_protection,
+        "Tech_Support": tech_support,
+        "Streaming_TV": streaming_tv,
+        "Streaming_Movies": streaming_movies,
         "Contract": contract,
-        "PaperlessBilling": paperless,
-        "PaymentMethod": payment,
-        "MonthlyCharges": float(monthly_charges),
+        "Paperless_Billing": paperless,
+        "Payment_Method": payment,
+        "Monthly_Charges": float(monthly_charges),
+        "Total_Charges": float(total_charges),
     }
 
 
-def render_prediction(model: XGBClassifier, metadata: dict, customer: dict) -> None:
+def render_prediction(
+    model: XGBClassifier,
+    metadata: dict,
+    feature_columns: list[str],
+    customer: dict,
+) -> None:
     if not st.button("Estimate churn risk", type="primary", use_container_width=True):
         return
 
     try:
-        features = preprocess_customers(pd.DataFrame([customer]))
-        if features.columns.tolist() != metadata["feature_names"]:
-            raise ValueError("The app feature order does not match the frozen model artifact.")
-        probability = float(model.predict_proba(features[FEATURE_COLUMNS])[:, 1][0])
+        features = encode_customers(pd.DataFrame([customer]), feature_columns)
+        probability = float(model.predict_proba(features)[:, 1][0])
     except (ValueError, TypeError) as error:
         st.error(f"Prediction could not be completed: {error}")
         return
 
     threshold = float(metadata["threshold"])
     predicted_churn = probability >= threshold
-    if probability >= 0.75:
-        risk_level = "High"
-    elif probability >= threshold:
-        risk_level = "Elevated"
-    elif probability >= 0.35:
-        risk_level = "Moderate"
-    else:
-        risk_level = "Low"
 
-    result_1, result_2, result_3 = st.columns(3)
-    result_1.metric("Estimated churn probability", format_percent(probability))
-    result_2.metric("Risk level", risk_level)
-    result_3.metric("Model decision", "Likely to leave" if predicted_churn else "Likely to stay")
+    # The team requested that probability and the derived risk-level card remain hidden
+    # to keep the live demo focused on the actionable model decision.
+    st.metric("Model decision", "Likely to leave" if predicted_churn else "Likely to stay")
 
     if predicted_churn:
         recommendation = (
@@ -188,16 +218,15 @@ def render_prediction(model: XGBClassifier, metadata: dict, customer: dict) -> N
         )
     else:
         recommendation = (
-            "No immediate retention flag was generated. Continue normal service monitoring; "
-            "the probability is an estimate rather than a guarantee."
+            "No immediate retention flag was generated. Continue normal service monitoring "
+            "and review the account again if customer behavior changes."
         )
 
     st.markdown(
         f"""
         <div class="risk-card">
           <strong>Recommended business action</strong><br>
-          {recommendation}<br><br>
-          <span class="small-note">The frozen decision threshold is {format_percent(threshold)}.</span>
+          {recommendation}
         </div>
         """,
         unsafe_allow_html=True,
@@ -240,6 +269,8 @@ def render_test_explorer() -> None:
 
     display_columns = [
         "customerID",
+        "City",
+        "ZipCode",
         "tenure",
         "Contract",
         "InternetService",
@@ -264,7 +295,8 @@ def render_test_explorer() -> None:
 def render_effectiveness(metadata: dict) -> None:
     st.header("C. Model effectiveness")
     st.write(
-        "The metrics below come from the locked 1,409-customer test set and the frozen 60% decision threshold."
+        f"The metrics below come from the locked {metadata['test_rows']:,}-customer test set "
+        f"using the deployed {format_percent(metadata['threshold'])} decision threshold."
     )
 
     metrics = metadata["metrics"]
@@ -293,7 +325,8 @@ def render_effectiveness(metadata: dict) -> None:
 
     with chart_2:
         st.subheader("Top model features")
-        importance = load_feature_importance().head(12).sort_values("importance")
+        importance = load_feature_importance().head(12).sort_values("importance").copy()
+        importance["feature"] = importance["feature"].map(humanize_feature)
         fig, axis = plt.subplots(figsize=(6.5, 4.8))
         axis.barh(importance["feature"], importance["importance"])
         axis.set_xlabel("Relative XGBoost importance")
@@ -306,7 +339,7 @@ def render_effectiveness(metadata: dict) -> None:
     false_positives = int(matrix[0, 1])
     false_negatives = int(matrix[1, 0])
     st.write(
-        f"At the frozen threshold, the model correctly identifies {int(matrix[1, 1]):,} churners. "
+        f"At the deployed threshold, the model correctly identifies {int(matrix[1, 1]):,} churners. "
         f"It produces {false_positives:,} false retention alerts and misses {false_negatives:,} actual churners."
     )
     st.caption(
@@ -319,23 +352,24 @@ def main() -> None:
     try:
         model = load_model()
         metadata = load_metadata()
+        feature_columns = load_feature_columns()
     except (FileNotFoundError, json.JSONDecodeError, ValueError) as error:
         st.error(f"The deployment artifacts could not be loaded: {error}")
         st.stop()
 
     st.title("Telco Customer Churn Predictor")
     st.write(
-        "A business-facing demonstration of the team's frozen XGBoost model for identifying customers who may discontinue service."
+        "A business-facing demonstration of the team's final XGBoost workflow for identifying customers who may discontinue service."
     )
     st.caption(
-        f"Model: {metadata['model_name']} · {metadata['feature_count']} engineered features · "
-        f"fixed threshold {format_percent(metadata['threshold'])}"
+        f"Model: {metadata['model_name']} · {metadata['raw_feature_count']} source features / "
+        f"{metadata['feature_count']:,} encoded features · fixed threshold {format_percent(metadata['threshold'])}"
     )
 
     st.divider()
     st.header("A. Customer churn prediction")
     customer = build_input_row()
-    render_prediction(model, metadata, customer)
+    render_prediction(model, metadata, feature_columns, customer)
 
     st.divider()
     render_test_explorer()
