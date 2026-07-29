@@ -79,6 +79,7 @@ XGBoost catches far more leavers than the other two models about 78% of churners
 **References:**
 
 - Bello, A.-W., Ajibade, I., & Ekweli, D. (2025). Predicting customer churn in subscription-based businesses using machine learning. _International Journal of Science and Research Archive, 16_(3), 1024–1038. [https://doi.org/10.30574/ijsra.2025.16.3.2664](https://doi.org/10.30574/ijsra.2025.16.3.2664)
+- Gallo, A. (2014). The value of keeping the right customers. In Harvard Business Review. [https://hbr.org/2014/10/the-value-of-keeping-the-right-customers]
 - Garcia de Alford, A. S., Hayden, S. K., Wittlin, N., & Atwood, A. (2020). Reducing age bias in machine learning: An algorithmic approach. _SMU Data Science Review, 3_(2), Article 11. [https://scholar.smu.edu/datasciencereview/vol3/iss2/11](https://scholar.smu.edu/datasciencereview/vol3/iss2/11)
 - Hardt, M., Price, E., & Srebro, N. (2016). Equality of opportunity in supervised learning. _Advances in Neural Information Processing Systems (NeurIPS)_. [https://home.ttic.edu/~nati/Publications/HardtPriceSrebro2016.pdf](https://home.ttic.edu/~nati/Publications/HardtPriceSrebro2016.pdf)
 - Hermawan, A., Saputra, A., Rafi, M. D., Basmallah, S., Putra, Y. T. S., & Nabila, W. (2025). Implementing XGBoost model for predicting customer churn in e-commerce platforms. _Repeater: Publikasi Teknik Informatika dan Jaringan, 3_(2), 17–31. [https://doi.org/10.62951/repeater.v3i2.401](https://doi.org/10.62951/repeater.v3i2.401)
