@@ -6,13 +6,13 @@
 ![Matplotlib](https://img.shields.io/badge/Matplotlib-Visualization-11557C)
 ![Project Status](https://img.shields.io/badge/Status-Modeling%20%26%20Evaluation-success)
 
-Team Members:
+Team Members: Kazi Hossain, Sebastian Arrieta, Tanish Gupta, Vic Chen, Rajeswari Anand, and Mari Kathleen Abdon
 
 ## Project Overview
 
 Our Telco Customer Churn Prediction project is a machine learning project which predicts which telecom customers are likely to churn. This is important because customer churn is a major cost for any subscription-based businesses. A company will lose on recurring revenue and the expense in obtaining that customer. Therefore, being able to flag customers that are likely to leave will allow the company to try retaining them before they completely cancel.
 
-**Research Question**: Can a machine learning classifier trained on Telco customer account and service-usage data reliably distinguish churners from non-churners, and which features are the strongest predictors of churn?
+**Research Question**: Can a machine learning classifier trained on Telco customer data reliably identify potential churners?
 
 **Dataset**: the models are trained on `telco-data/WA*Fn-UseC*-Telco-Customer-Churn.csv
 
