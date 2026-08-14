@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Telco Customer Churn Prediction</title>
+    <meta
+      name="description"
+      content="Student symposium site for a telco churn classifier: project overview, algorithms, evaluation, impact and bias, citations, and next steps."
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="#overview">Telco Churn Prediction</a>
+        <button
+          class="nav-toggle"
+          type="button"
+          aria-expanded="false"
+          aria-controls="site-nav"
+        >
+          Menu
+        </button>
+        <nav id="site-nav" class="site-nav" aria-label="Page sections">
+          <a href="#overview">Overview</a>
+          <a href="#algorithms">Algorithms</a>
+          <a href="#evaluation">Evaluation</a>
+          <a href="#impact">Impact &amp; Bias</a>
+          <a href="#citations">Citations</a>
+          <a href="#next-steps">Next Steps</a>
+          <a
+            class="nav-github"
+            href="https://github.com/abdonkath/netflix-churn-predictor"
+            target="_blank"
+            rel="noopener noreferrer"
+            >View on GitHub</a
+          >
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="hero" id="overview" aria-labelledby="overview-title">
+        <p class="eyebrow">Student Symposium · Machine Learning Case Study</p>
+        <h1 id="overview-title">Telco Customer Churn Prediction</h1>
+        <p class="lede">
+          A machine learning project that predicts which telecom customers are
+          likely to churn, so a company can try to retain them before they
+          cancel.
+        </p>
+      </section>
+
+      <section class="section" aria-labelledby="overview-heading">
+        <h2 id="overview-heading">Project Overview</h2>
+        <p>
+          Customer churn is a major cost for subscription businesses. A company
+          loses recurring revenue and the cost of acquiring that customer.
+          Flagging people who are likely to leave makes it possible to intervene
+          with a retention offer or outreach call.
+        </p>
+        <p>
+          <strong>Research question:</strong> Can a machine learning classifier
+          trained on Telco customer account and service-usage data reliably
+          distinguish churners from non-churners, and which features are the
+          strongest predictors of churn?
+        </p>
+        <p>
+          The models are trained on the IBM Telco Customer Churn dataset
+          (<code>WA_Fn-UseC_-Telco-Customer-Churn.csv</code>): 7,043 customers,
+          of whom about 26.5% churned. Because churners are the minority class,
+          the team optimized for more than raw accuracy and tracked recall on
+          churners alongside precision, F1, and ROC-AUC.
+        </p>
+        <h3>How the project evolved</h3>
+        <ol class="pipeline">
+          <li>Validate and clean the raw Telco CSV.</li>
+          <li>Engineer account and service-usage features.</li>
+          <li>Split customers with a stratified train/test split.</li>
+          <li>
+            Train three classifiers on the same split: logistic regression,
+            random forest, and XGBoost.
+          </li>
+          <li>Compare models and decision thresholds on validation/CV only.</li>
+          <li>
+            Select XGBoost for deployment because it caught more leavers.
+          </li>
+          <li>
+            Freeze the saved model and feature artifacts for a Streamlit demo
+            that returns a customer churn-risk estimate.
+          </li>
+        </ol>
+      </section>
+
+      <section class="section" id="algorithms" aria-labelledby="algorithms-title">
+        <h2 id="algorithms-title">Algorithms</h2>
+        <p>
+          All three models solve the same <strong>binary classification</strong>
+          problem: will this customer churn, or stay?
+        </p>
+        <div class="algo-grid">
+          <article class="card">
+            <h3>Type</h3>
+            <p>
+              Supervised binary classifiers. Logistic regression is a linear
+              baseline. Random forest and XGBoost are tree ensembles; XGBoost
+              was selected as the frozen deployment model.
+            </p>
+          </article>
+          <article class="card">
+            <h3>Inputs</h3>
+            <p>
+              Engineered account and service-usage features, including contract
+              type, tech support, online security, dependents, internet service,
+              tenure, monthly charges, total charges, and related fields shown
+              in the feature-importance figure. The raw table also includes
+              demographic attributes (<code>Gender</code>,
+              <code>Senior_Citizen</code>, <code>Partner</code>,
+              <code>Dependents</code>).
+            </p>
+          </article>
+          <article class="card">
+            <h3>Outputs</h3>
+            <p>
+              A churn probability for each customer and a stay/leave decision
+              after a chosen threshold. The frozen XGBoost artifact is what a
+              Streamlit app would use to estimate churn risk.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" id="evaluation" aria-labelledby="evaluation-title">
+        <h2 id="evaluation-title">Evaluation</h2>
+        <p>
+          We compared three classifiers on the same stratified test customers.
+          XGBoost catches about 78% of churners, versus 53% for logistic
+          regression and 45% for random forest. It also ranks risk more
+          accurately (0.63 average precision) and separates classes more
+          clearly (0.83 ROC-AUC). We picked XGBoost because missing a leaver
+          costs a lost customer, so a model that catches more of them is worth
+          more than one that is only marginally more precise.
+        </p>
+
+        <div class="table-wrap">
+          <table>
+            <caption>
+              Held-out test comparison (same customers for every model)
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Metric</th>
+                <th scope="col">XGBoost</th>
+                <th scope="col">Logistic regression</th>
+                <th scope="col">Random forest</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Leavers caught (recall)</th>
+                <td>78%</td>
+                <td>53%</td>
+                <td>45%</td>
+              </tr>
+              <tr>
+                <th scope="row">Ranks risk correctly (avg. precision)</th>
+                <td>0.63</td>
+                <td>0.60</td>
+                <td>0.57</td>
+              </tr>
+              <tr>
+                <th scope="row">Overall score (ROC-AUC)</th>
+                <td>0.83</td>
+                <td>0.82</td>
+                <td>0.81</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="chart-panel card">
+          <h3>Interactive comparison</h3>
+          <p class="chart-note">
+            Click a legend item to show or hide a metric. Hover a bar for the
+            exact value. Average precision and ROC-AUC are plotted on a 0–100
+            scale (value × 100) so they can sit beside recall.
+          </p>
+          <div class="chart-legend" id="chart-legend"></div>
+          <canvas
+            id="model-chart"
+            width="800"
+            height="360"
+            aria-label="Grouped bar chart of recall, average precision, and ROC-AUC for XGBoost, logistic regression, and random forest"
+          ></canvas>
+        </div>
+
+        <figure>
+          <img
+            src="assets/churn_distribution.png"
+            alt="Bar chart of churn class distribution: 5,174 retained customers (73.5%) and 1,869 churned customers (26.5%)"
+          />
+          <figcaption>
+            Out of 7,043 customers, about 26.6% (1,869) churned while 73.4%
+            (5,174) stayed. There is about a 3:1 imbalance, which is why the
+            project focuses on recall, precision, and F1 on the churned class
+            instead of overall accuracy.
+          </figcaption>
+        </figure>
+
+        <figure>
+          <img
+            src="assets/feature_importance_xgboost.png"
+            alt="Horizontal bar chart of the top 15 XGBoost feature importances, led by month-to-month contract, two-year contract, and no tech support"
+          />
+          <figcaption>
+            <code>Contract_Month-to-month</code>,
+            <code>Contract_Two_year</code>, and
+            <code>Tech_Support_No</code> rank highest and account for over 50%
+            of XGBoost feature importances. Contract type contributes more than
+            any other factor: month-to-month customers are more likely to churn,
+            while two-year contract holders are far less likely to. Next are
+            one-year contracts, no online security, dependents, fiber-optic
+            internet, and tenure. Lacking security, having no dependents, and
+            shorter tenure also raise churn risk.
+          </figcaption>
+        </figure>
+
+        <figure>
+          <img
+            src="assets/confusion_matrix.png"
+            alt="Confusion matrix on 1,409 test customers comparing predicted leave versus stay against the true labels"
+          />
+          <figcaption>
+            Out of 1,409 test customers, the model correctly identified 319 of
+            374 actual churners (85.3% recall) and 721 of 1,035 customers who
+            stayed. It flagged 314 loyal customers as at-risk (false positives)
+            and missed 55 churners (false negatives). We chose this trade-off to
+            prioritize catching churners: missing a churner costs a lost
+            customer, which is more expensive than a false positive that only
+            costs unnecessary retention outreach.
+          </figcaption>
+        </figure>
+      </section>
+
+      <section class="section" id="impact" aria-labelledby="impact-title">
+        <h2 id="impact-title">Impact &amp; Bias</h2>
+        <article class="card">
+          <h3>Positive impact</h3>
+          <p>
+            Used as intended, the model helps a business prioritize retention
+            actions—an offer or an outreach call—for customers flagged as
+            high-risk. Catching a churner who would otherwise leave protects
+            recurring revenue and avoids re-acquisition cost.
+          </p>
+        </article>
+        <article class="card">
+          <h3>Negative impact</h3>
+          <p>
+            A false negative is a churner the model misses: a lost customer the
+            company never tries to keep. A false positive is a loyal customer
+            flagged as at-risk: unnecessary outreach or a discount given to
+            someone who would have stayed. The team treated false negatives as
+            more expensive, so higher recall was chosen over higher precision.
+            That choice increases outreach volume and can annoy or discount
+            customers who were not going to leave.
+          </p>
+        </article>
+        <article class="card">
+          <h3>How AI/ML can amplify or mitigate bias</h3>
+          <p>
+            The feature set includes demographic attributes
+            (<code>Gender</code>, <code>Senior_Citizen</code>,
+            <code>Partner</code>, <code>Dependents</code>). Because these
+            correlate with regulated or protected characteristics, using them to
+            decide who gets a discount or a retention call can
+            <strong>amplify bias</strong> through disparate treatment—for
+            example, systematically offering different terms by age or family
+            status.
+          </p>
+          <p>
+            ML can <strong>mitigate bias</strong> in this case study if those
+            attributes are reviewed or excluded before any real deployment, if
+            error rates are checked across groups, and if the score is treated
+            as a probability for prioritizing outreach rather than a verdict
+            about an individual. Equalized-odds style constraints and
+            age-bias-aware modeling are the kinds of safeguards this setting
+            would need before production use.
+          </p>
+        </article>
+        <article class="card">
+          <h3>Limits</h3>
+          <p>
+            The dataset is a single historical snapshot from one provider
+            (7,043 customers), so performance may not generalize to other
+            companies, regions, or time periods. The model is a frozen artifact
+            with no drift monitoring or retraining pipeline. It is a project
+            demonstration, not a production retention system.
+          </p>
+        </article>
+      </section>
+
+      <section class="section" id="citations" aria-labelledby="citations-title">
+        <h2 id="citations-title">Citations &amp; Documentation</h2>
+        <h3>Data source</h3>
+        <p>
+          IBM Telco Customer Churn dataset
+          (<code>WA_Fn-UseC_-Telco-Customer-Churn.csv</code>).
+          <a
+            href="https://www.kaggle.com/datasets/blastchar/telco-customer-churn/data"
+            target="_blank"
+            rel="noopener noreferrer"
+            >Kaggle: blastchar/telco-customer-churn</a
+          >.
+        </p>
+        <h3>Code and documentation</h3>
+        <p>
+          <a
+            href="https://github.com/abdonkath/netflix-churn-predictor"
+            target="_blank"
+            rel="noopener noreferrer"
+            >github.com/abdonkath/netflix-churn-predictor</a
+          >
+          — notebooks, frozen model artifacts, and project documentation.
+        </p>
+        <h3>Libraries and frameworks</h3>
+        <p>
+          pandas, NumPy, scikit-learn, XGBoost, matplotlib, seaborn, Streamlit.
+        </p>
+        <h3>References</h3>
+        <ol class="refs">
+          <li>
+            Gallo, A. (2014). The value of keeping the right customers.
+            <em>Harvard Business Review</em>.
+            <a
+              href="https://hbr.org/2014/10/the-value-of-keeping-the-right-customers"
+              target="_blank"
+              rel="noopener noreferrer"
+              >https://hbr.org/2014/10/the-value-of-keeping-the-right-customers</a
+            >
+          </li>
+          <li>
+            Hardt, M., Price, E., &amp; Srebro, N. (2016). Equality of
+            opportunity in supervised learning.
+            <em>Advances in Neural Information Processing Systems (NeurIPS)</em>.
+            <a
+              href="https://home.ttic.edu/~nati/Publications/HardtPriceSrebro2016.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+              >https://home.ttic.edu/~nati/Publications/HardtPriceSrebro2016.pdf</a
+            >
+          </li>
+          <li>
+            Garcia de Alford, A. S., Hayden, S. K., Wittlin, N., &amp; Atwood,
+            A. (2020). Reducing age bias in machine learning: An algorithmic
+            approach.
+            <em>SMU Data Science Review, 3</em>(2), Article 11.
+            <a
+              href="https://scholar.smu.edu/datasciencereview/vol3/iss2/11"
+              target="_blank"
+              rel="noopener noreferrer"
+              >https://scholar.smu.edu/datasciencereview/vol3/iss2/11</a
+            >
+          </li>
+          <li>
+            Zhao, T., &amp; Qi, X. (2025). Telecom customer churn prediction
+            with explainable machine learning. In
+            <em
+              >Proceedings of the 2025 2nd International Conference on Modeling,
+              Natural Language Processing and Machine Learning</em
+            >
+            (pp. 246–250). Association for Computing Machinery.
+            <a
+              href="https://doi.org/10.1145/3757110.3757152"
+              target="_blank"
+              rel="noopener noreferrer"
+              >https://doi.org/10.1145/3757110.3757152</a
+            >
+          </li>
+        </ol>
+      </section>
+
+      <section class="section" id="next-steps" aria-labelledby="next-steps-title">
+        <h2 id="next-steps-title">Next Steps</h2>
+        <article class="card">
+          <h3>Uplift modeling</h3>
+          <p>
+            The current model predicts <em>who will churn</em>, not
+            <em>who can be saved</em>. Uplift modeling (for example a T-learner
+            or X-learner) would split customers into four groups: sure things
+            (staying regardless), lost causes (leaving regardless),
+            persuadables (retained because of the offer—the real target), and
+            sleeping dogs (customers who churn because they were contacted).
+            Outreach could then target only persuadables instead of the whole
+            high-risk group.
+          </p>
+        </article>
+        <article class="card">
+          <h3>Survival analysis</h3>
+          <p>
+            We currently output a single churn probability with no sense of
+            timing. Using tenure in a Cox proportional hazards or Kaplan–Meier
+            model would estimate <em>when</em> a customer is likely to churn
+            (for example, “40% risk within the next 3 months”), giving retention
+            teams a timing signal instead of a static score.
+          </p>
+        </article>
+        <article class="card">
+          <h3>SHAP interaction analysis</h3>
+          <p>
+            Beyond single-feature importances, SHAP interaction values could
+            surface which feature combinations (for example month-to-month
+            contract + fiber optic + electronic check) drive the highest risk,
+            turning the feature-importance chart into named at-risk customer
+            personas that retention teams could design specific offers around.
+          </p>
+        </article>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>
+        Telco Customer Churn Prediction ·
+        <a
+          href="https://github.com/abdonkath/netflix-churn-predictor"
+          target="_blank"
+          rel="noopener noreferrer"
+          >GitHub repository</a
+        >
+      </p>
+    </footer>
+
+    <script src="script.js"></script>
+  </body>
+</html>
